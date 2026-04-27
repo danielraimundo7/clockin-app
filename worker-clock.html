@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Worker Job Clock</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+  <div class="max-w-md mx-auto p-4">
+    <div class="bg-white rounded-2xl shadow p-5 mt-4">
+      <h1 class="text-xl font-bold mb-1">Job Clock</h1>
+      <p class="text-sm text-gray-500 mb-4">Select your name and clock in/out.</p>
+
+      <div id="loadingBox" class="text-gray-600">
+        Loading job...
+      </div>
+
+      <div id="errorBox" class="hidden bg-red-100 text-red-700 p-3 rounded-lg mb-4"></div>
+
+      <div id="loginBox" class="hidden">
+        <label class="block text-sm font-semibold mb-1">Select Worker</label>
+        <select id="workerSelect" class="w-full border rounded-lg p-3 mb-3"></select>
+
+        <label class="block text-sm font-semibold mb-1">PIN</label>
+        <input
+          id="pinInput"
+          type="password"
+          class="w-full border rounded-lg p-3 mb-4"
+          placeholder="Enter PIN"
+        />
+
+        <button
+          onclick="continueToJob()"
+          class="w-full bg-black text-white rounded-lg p-3 font-semibold"
+        >
+          Continue
+        </button>
+      </div>
+
+      <div id="jobBox" class="hidden">
+        <div class="border rounded-xl p-4 mb-4 bg-gray-50">
+          <h2 id="clientName" class="text-lg font-bold"></h2>
+          <p id="jobDate" class="text-sm text-gray-600"></p>
+          <p id="jobAddress" class="text-sm text-gray-600 mt-1"></p>
+        </div>
+
+        <div class="space-y-3 text-sm mb-4">
+          <div>
+            <p class="font-semibold">Assigned Worker</p>
+            <p id="selectedWorkerInfo"></p>
+          </div>
+
+          <div>
+            <p class="font-semibold">Assigned Time</p>
+            <p id="assignedTime"></p>
+          </div>
+
+          <div>
+            <p class="font-semibold">Service Type</p>
+            <p id="serviceType"></p>
+          </div>
+
+          <div>
+            <p class="font-semibold">Entry Info</p>
+            <p id="entrance"></p>
+          </div>
+
+          <div>
+            <p class="font-semibold">Material Info</p>
+            <p id="materialInfo"></p>
+          </div>
+
+          <div>
+            <p class="font-semibold">Instructions</p>
+            <p id="instructions"></p>
+          </div>
+
+          <div>
+            <p class="font-semibold">Other Info</p>
+            <p id="otherInfo"></p>
+          </div>
+        </div>
+
+        <div id="timerBox" class="hidden text-center bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+          <p class="text-sm text-green-700 font-semibold">Clocked In</p>
+          <p id="timer" class="text-2xl font-bold mt-1">00:00:00</p>
+        </div>
+
+        <button
+          id="clockInBtn"
+          onclick="clockIn()"
+          class="w-full bg-green-600 text-white rounded-lg p-3 font-semibold mb-3"
+        >
+          Clock In
+        </button>
+
+        <button
+          id="clockOutBtn"
+          onclick="clockOut()"
+          class="hidden w-full bg-red-600 text-white rounded-lg p-3 font-semibold"
+        >
+          Clock Out
+        </button>
+
+        <div id="messageBox" class="hidden mt-4 p-3 rounded-lg text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwz401Ii47fb86kB-eo93tirJmGpbHFS2jEonIn6yuFjNqu5rxjQiPvUTOzDkvAvoPR/exec";
+
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get("eventId");
+
+    let jobData = null;
+    let selectedWorker = null;
+    let clockInTime = null;
+    let timerInterval = null;
+
+    document.addEventListener("DOMContentLoaded", loadJob);
+
+    async function loadJob() {
+      try {
+        if (!eventId) {
+          showError("Missing job link. No EventId found.");
+          return;
+        }
+
+        const url = `${API_URL}?action=getWorkerJob&eventId=${encodeURIComponent(eventId)}`;
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (!json.success) {
+          showError(json.error || "Could not load job.");
+          return;
+        }
+
+        jobData = json.data;
+
+        if (!jobData.workers || jobData.workers.length === 0) {
+          showError("No workers assigned to this job.");
+          return;
+        }
+
+        populateWorkerDropdown(jobData.workers);
+
+        document.getElementById("loadingBox").classList.add("hidden");
+        document.getElementById("loginBox").classList.remove("hidden");
+
+      } catch (err) {
+        showError("Error loading job: " + err.message);
+      }
+    }
+
+    function populateWorkerDropdown(workers) {
+      const select = document.getElementById("workerSelect");
+      select.innerHTML = "";
+
+      workers.forEach(worker => {
+        const option = document.createElement("option");
+        option.value = worker.workerId;
+        option.textContent = `${worker.workerName} - ${worker.workerId}`;
+        select.appendChild(option);
+      });
+    }
+
+    function continueToJob() {
+      const workerId = document.getElementById("workerSelect").value;
+      const pin = document.getElementById("pinInput").value.trim();
+
+      if (!workerId) {
+        showError("Please select your name.");
+        return;
+      }
+
+      if (!pin) {
+        showError("Please enter your PIN.");
+        return;
+      }
+
+      selectedWorker = jobData.workers.find(w => w.workerId === workerId);
+
+      // PIN validation will be added in backend later.
+      // For now, this allows the flow to continue.
+      renderJobPage();
+
+      document.getElementById("errorBox").classList.add("hidden");
+      document.getElementById("loginBox").classList.add("hidden");
+      document.getElementById("jobBox").classList.remove("hidden");
+    }
+
+    function renderJobPage() {
+      document.getElementById("clientName").textContent = jobData.clientName || "Job";
+      document.getElementById("jobDate").textContent = `${jobData.date || ""} ${jobData.requestedTime || ""}`;
+      document.getElementById("jobAddress").textContent = jobData.address || "";
+
+      document.getElementById("selectedWorkerInfo").textContent =
+        `${selectedWorker.workerName} (${selectedWorker.workerId}) — ${selectedWorker.role || ""} — $${selectedWorker.rate || ""}/hr`;
+
+      document.getElementById("assignedTime").textContent =
+        selectedWorker.assignedTime || jobData.assignedTime || "";
+
+      document.getElementById("serviceType").textContent = jobData.serviceType || "";
+      document.getElementById("entrance").textContent = jobData.entrance || "";
+      document.getElementById("materialInfo").textContent = jobData.materialInfo || "";
+      document.getElementById("instructions").textContent = jobData.instructions || "";
+      document.getElementById("otherInfo").textContent = jobData.otherInfo || "";
+    }
+
+    async function clockIn() {
+      try {
+        const payload = {
+          action: "clockIn",
+          eventId: eventId,
+          workerId: selectedWorker.workerId
+        };
+
+        const json = await postToApi(payload);
+
+        if (!json.success) {
+          showMessage(json.error || "Could not clock in.", "error");
+          return;
+        }
+
+        clockInTime = new Date(json.clockInTime);
+
+        document.getElementById("clockInBtn").classList.add("hidden");
+        document.getElementById("clockOutBtn").classList.remove("hidden");
+        document.getElementById("timerBox").classList.remove("hidden");
+
+        startTimer();
+        showMessage("Clocked in successfully.", "success");
+
+      } catch (err) {
+        showMessage("Clock-in error: " + err.message, "error");
+      }
+    }
+
+    async function clockOut() {
+      try {
+        const payload = {
+          action: "clockOut",
+          workerId: selectedWorker.workerId
+        };
+
+        const json = await postToApi(payload);
+
+        if (!json.success) {
+          showMessage(json.error || "Could not clock out.", "error");
+          return;
+        }
+
+        stopTimer();
+
+        document.getElementById("clockOutBtn").classList.add("hidden");
+        document.getElementById("clockInBtn").classList.remove("hidden");
+        document.getElementById("timerBox").classList.add("hidden");
+
+        showMessage(`Clocked out successfully. Total minutes: ${json.totalMinutes}`, "success");
+
+      } catch (err) {
+        showMessage("Clock-out error: " + err.message, "error");
+      }
+    }
+
+    async function postToApi(payload) {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      return await res.json();
+    }
+
+    function startTimer() {
+      stopTimer();
+
+      timerInterval = setInterval(() => {
+        const now = new Date();
+        const diff = Math.floor((now - clockInTime) / 1000);
+
+        const hours = String(Math.floor(diff / 3600)).padStart(2, "0");
+        const minutes = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
+        const seconds = String(diff % 60).padStart(2, "0");
+
+        document.getElementById("timer").textContent = `${hours}:${minutes}:${seconds}`;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function showError(message) {
+      document.getElementById("loadingBox").classList.add("hidden");
+      const box = document.getElementById("errorBox");
+      box.textContent = message;
+      box.classList.remove("hidden");
+    }
+
+    function showMessage(message, type) {
+      const box = document.getElementById("messageBox");
+      box.textContent = message;
+      box.classList.remove("hidden");
+
+      if (type === "success") {
+        box.className = "mt-4 p-3 rounded-lg text-sm bg-green-100 text-green-700";
+      } else {
+        box.className = "mt-4 p-3 rounded-lg text-sm bg-red-100 text-red-700";
+      }
+    }
+  </script>
+</body>
+</html>
