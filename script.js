@@ -1,4 +1,6 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwz401Ii47fb86kB-eo93tirJmGpbHFS2jEonIn6yuFjNqu5rxjQiPvUTOzDkvAvoPR/exec";
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+const LOCATION_REQUIRED = true;
 
 const params = new URLSearchParams(window.location.search);
 const eventId = params.get("eventId");
@@ -46,7 +48,7 @@ function populateWorkerDropdown(workers) {
   const select = document.getElementById("workerSelect");
   select.innerHTML = "";
 
-  workers.forEach(worker => {
+  workers.forEach((worker) => {
     const option = document.createElement("option");
     option.value = worker.workerId;
     option.textContent = `${worker.workerName} - ${worker.workerId}`;
@@ -68,7 +70,7 @@ function continueToJob() {
     return;
   }
 
-  selectedWorker = jobData.workers.find(w => w.workerId === workerId);
+  selectedWorker = jobData.workers.find((w) => w.workerId === workerId);
 
   renderJobPage();
 
@@ -95,12 +97,71 @@ function renderJobPage() {
   document.getElementById("otherInfo").textContent = jobData.otherInfo || "";
 }
 
+function getCurrentLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Location is not supported on this device/browser."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          capturedAt: new Date(position.timestamp).toISOString(),
+          status: "CAPTURED",
+          error: ""
+        });
+      },
+      (error) => {
+        reject(new Error(error.message || "Location permission denied."));
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      }
+    );
+  });
+}
+
+async function getLocationForClockAction(actionName) {
+  showMessage(`Requesting location for ${actionName}...`, "success");
+
+  try {
+    return await getCurrentLocation();
+  } catch (err) {
+    if (LOCATION_REQUIRED) {
+      showMessage(
+        `Location is required to ${actionName}. Please allow location access and try again.`,
+        "error"
+      );
+      return null;
+    }
+
+    return {
+      latitude: "",
+      longitude: "",
+      accuracy: "",
+      capturedAt: new Date().toISOString(),
+      status: "FAILED",
+      error: err.message || "Location capture failed"
+    };
+  }
+}
+
 async function clockIn() {
   try {
+    const location = await getLocationForClockAction("clock in");
+    if (!location) return;
+
     const payload = {
       action: "clockIn",
       eventId: eventId,
-      workerId: selectedWorker.workerId
+      workerId: selectedWorker.workerId,
+      location: location
     };
 
     const json = await postToApi(payload);
@@ -117,7 +178,7 @@ async function clockIn() {
     document.getElementById("timerBox").classList.remove("hidden");
 
     startTimer();
-    showMessage("Clocked in successfully.", "success");
+    showMessage("Clocked in successfully. Location captured.", "success");
   } catch (err) {
     showMessage("Clock-in error: " + err.message, "error");
   }
@@ -125,9 +186,13 @@ async function clockIn() {
 
 async function clockOut() {
   try {
+    const location = await getLocationForClockAction("clock out");
+    if (!location) return;
+
     const payload = {
       action: "clockOut",
-      workerId: selectedWorker.workerId
+      workerId: selectedWorker.workerId,
+      location: location
     };
 
     const json = await postToApi(payload);
@@ -143,7 +208,10 @@ async function clockOut() {
     document.getElementById("clockInBtn").classList.remove("hidden");
     document.getElementById("timerBox").classList.add("hidden");
 
-    showMessage(`Clocked out successfully. Total minutes: ${json.totalMinutes}`, "success");
+    showMessage(
+      `Clocked out successfully. Total minutes: ${json.totalMinutes}. Location captured.`,
+      "success"
+    );
   } catch (err) {
     showMessage("Clock-out error: " + err.message, "error");
   }
@@ -166,7 +234,7 @@ function startTimer() {
     const diff = Math.floor((now - clockInTime) / 1000);
 
     const hours = String(Math.floor(diff / 3600)).padStart(2, "0");
-    const minutes = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
+    const minutes = String(Math.floor((diff % 3600) / 60).padStart(2, "0"));
     const seconds = String(diff % 60).padStart(2, "0");
 
     document.getElementById("timer").textContent = `${hours}:${minutes}:${seconds}`;
