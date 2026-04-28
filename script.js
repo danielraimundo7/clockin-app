@@ -56,7 +56,7 @@ function populateWorkerDropdown(workers) {
   });
 }
 
-function continueToJob() {
+async function continueToJob() {
   const workerId = document.getElementById("workerSelect").value;
   const pin = document.getElementById("pinInput").value.trim();
 
@@ -77,6 +77,84 @@ function continueToJob() {
   document.getElementById("errorBox").classList.add("hidden");
   document.getElementById("loginBox").classList.add("hidden");
   document.getElementById("jobBox").classList.remove("hidden");
+
+  await checkClockStatus();
+}
+
+async function checkClockStatus() {
+  try {
+    const url =
+      `${API_URL}?action=getClockStatus&eventId=${encodeURIComponent(eventId)}&workerId=${encodeURIComponent(selectedWorker.workerId)}`;
+
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (!json.success || !json.data) {
+      showClockInState();
+      return;
+    }
+
+    const status = json.data;
+
+    if (!status.isClockedIn) {
+      showClockInState();
+      return;
+    }
+
+    clockInTime = new Date(status.clockInTime);
+
+    if (status.isCurrentJob) {
+      showClockOutState();
+      startTimer();
+      showMessage("You are already clocked in to this job.", "success");
+      return;
+    }
+
+    showAlreadyClockedInElsewhere(status);
+  } catch (err) {
+    showMessage("Could not check clock status: " + err.message, "error");
+    showClockInState();
+  }
+}
+
+function showClockInState() {
+  stopTimer();
+  document.getElementById("clockInBtn").classList.remove("hidden");
+  document.getElementById("clockOutBtn").classList.add("hidden");
+  document.getElementById("timerBox").classList.add("hidden");
+}
+
+function showClockOutState() {
+  document.getElementById("clockInBtn").classList.add("hidden");
+  document.getElementById("clockOutBtn").classList.remove("hidden");
+  document.getElementById("timerBox").classList.remove("hidden");
+}
+
+function showAlreadyClockedInElsewhere(status) {
+  stopTimer();
+
+  document.getElementById("clockInBtn").classList.add("hidden");
+  document.getElementById("clockOutBtn").classList.add("hidden");
+  document.getElementById("timerBox").classList.add("hidden");
+
+  const client = status.clientName || "another job";
+  const address = status.address || "";
+  const jobLink = status.jobLink || "";
+
+  const messageBox = document.getElementById("messageBox");
+  messageBox.classList.remove("hidden", "success", "error");
+  messageBox.classList.add("error");
+
+  messageBox.innerHTML = `
+    <strong>You are already clocked in at:</strong><br>
+    ${escapeHtml(client)}<br>
+    ${address ? `<span>${escapeHtml(address)}</span><br>` : ""}
+    ${
+      jobLink
+        ? `<br><a class="go-job-link" href="${escapeHtml(jobLink)}">Go to current job</a>`
+        : ""
+    }
+  `;
 }
 
 function renderJobPage() {
@@ -168,15 +246,13 @@ async function clockIn() {
 
     if (!json.success) {
       showMessage(json.error || "Could not clock in.", "error");
+      await checkClockStatus();
       return;
     }
 
     clockInTime = new Date(json.clockInTime);
 
-    document.getElementById("clockInBtn").classList.add("hidden");
-    document.getElementById("clockOutBtn").classList.remove("hidden");
-    document.getElementById("timerBox").classList.remove("hidden");
-
+    showClockOutState();
     startTimer();
     showMessage("Clocked in successfully. Location captured.", "success");
   } catch (err) {
@@ -203,10 +279,7 @@ async function clockOut() {
     }
 
     stopTimer();
-
-    document.getElementById("clockOutBtn").classList.add("hidden");
-    document.getElementById("clockInBtn").classList.remove("hidden");
-    document.getElementById("timerBox").classList.add("hidden");
+    showClockInState();
 
     showMessage(
       `Clocked out successfully. Total minutes: ${json.totalMinutes}. Location captured.`,
@@ -234,7 +307,7 @@ function startTimer() {
     const diff = Math.floor((now - clockInTime) / 1000);
 
     const hours = String(Math.floor(diff / 3600)).padStart(2, "0");
-    const minutes = String(Math.floor((diff % 3600) / 60).padStart(2, "0"));
+    const minutes = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
     const seconds = String(diff % 60).padStart(2, "0");
 
     document.getElementById("timer").textContent = `${hours}:${minutes}:${seconds}`;
@@ -262,4 +335,13 @@ function showMessage(message, type) {
 
   box.classList.remove("success", "error");
   box.classList.add(type === "success" ? "success" : "error");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
