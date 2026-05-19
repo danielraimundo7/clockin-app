@@ -11,11 +11,18 @@
   <main class="app-shell">
     <section class="card">
       <header class="app-header">
-        <div>
-          <h1>Job Clock</h1>
-          <p>Clock in and out for your assigned job.</p>
-        </div>
-      </header>
+  <div>
+    <h1>Job Clock</h1>
+    <p>Clock in and out for your assigned job.</p>
+  </div>
+
+  <button
+    id="backToPortalBtn"
+    class="header-back-btn hidden"
+  >
+    Back
+  </button>
+</header>
 
       <div id="loadingBox" class="loading">Loading job...</div>
 
@@ -39,12 +46,7 @@
     <p id="jobAddress"></p>
   </div>
 
-  <button
-    id="backToPortalBtn"
-    class="secondary-btn hidden"
-  >
-    Back
-  </button>
+
 </div>
 
         <div class="info-list">
