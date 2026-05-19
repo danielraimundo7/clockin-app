@@ -175,13 +175,6 @@ input {
   gap: 16px;
 }
 
-.job-header-row .secondary-btn {
-  width: auto;
-  padding: 10px 16px;
-  min-width: 90px;
-  flex-shrink: 0;
-}
-
 @media (max-width: 480px) {
   .app-shell {
     padding: 10px;
@@ -206,4 +199,21 @@ input {
   .timer-box strong {
     font-size: 38px;
   }
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.header-back-btn {
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
 }
