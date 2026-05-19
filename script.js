@@ -4,6 +4,7 @@ const LOCATION_REQUIRED = true;
 
 const params = new URLSearchParams(window.location.search);
 const eventId = params.get("eventId");
+const portalWorkerId = params.get("workerId");
 
 let jobData = null;
 let selectedWorker = null;
@@ -37,8 +38,27 @@ async function loadJob() {
 
     populateWorkerDropdown(jobData.workers);
 
-    document.getElementById("loadingBox").classList.add("hidden");
-    document.getElementById("loginBox").classList.remove("hidden");
+document.getElementById("loadingBox").classList.add("hidden");
+
+if (portalWorkerId) {
+  const matchedWorker = jobData.workers.find(
+    (w) => w.workerId === portalWorkerId
+  );
+
+  if (matchedWorker) {
+    selectedWorker = matchedWorker;
+
+    renderJobPage();
+
+    document.getElementById("jobBox").classList.remove("hidden");
+
+    await checkClockStatus();
+
+    return;
+  }
+}
+
+document.getElementById("loginBox").classList.remove("hidden");
   } catch (err) {
     showError("Error loading job: " + err.message);
   }
