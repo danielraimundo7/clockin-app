@@ -5,6 +5,7 @@ const LOCATION_REQUIRED = true;
 const params = new URLSearchParams(window.location.search);
 const eventId = params.get("eventId");
 const portalWorkerId = params.get("workerId");
+const fromPortal = params.get("fromPortal");
 
 let jobData = null;
 let selectedWorker = null;
@@ -62,6 +63,7 @@ document.getElementById("loginBox").classList.remove("hidden");
   } catch (err) {
     showError("Error loading job: " + err.message);
   }
+
 }
 
 function populateWorkerDropdown(workers) {
@@ -232,6 +234,17 @@ document.getElementById("entrance").textContent = jobData.entrance || "";
 document.getElementById("materialInfo").textContent = jobData.materialInfo || "";
 document.getElementById("instructions").textContent = jobData.instructions || "";
 document.getElementById("otherInfo").textContent = jobData.otherInfo || "";
+
+// BACK BUTTON
+const backBtn = document.getElementById("backToPortalBtn");
+
+if (fromPortal && backBtn) {
+  backBtn.classList.remove("hidden");
+
+  backBtn.onclick = () => {
+    window.history.back();
+  };
+}
 
 document.getElementById("clockInBtn").classList.add("hidden");
 document.getElementById("clockOutBtn").classList.add("hidden");
