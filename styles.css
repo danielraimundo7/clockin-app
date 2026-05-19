@@ -167,6 +167,21 @@ input {
   display: none;
 }
 
+
+.job-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.job-header-row .secondary-btn {
+  width: auto;
+  padding: 10px 16px;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 480px) {
   .app-shell {
     padding: 10px;
