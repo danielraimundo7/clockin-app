@@ -110,29 +110,52 @@ async function checkClockStatus() {
     const json = await res.json();
 
     if (!json.success || !json.data) {
-      showClockInState();
-      return;
-    }
+  showClockInState();
+  return;
+}
 
     const status = json.data;
 
+    // COMPLETED
+    if (!status.isClockedIn && status.isCompleted) {
+      showCompletedState();
+      showMessage(
+        "This job has already been completed.",
+        "success"
+      );
+      return;
+    }
+
+    // NOT CLOCKED IN
     if (!status.isClockedIn) {
       showClockInState();
       return;
     }
 
+    // CURRENT JOB ACTIVE
     clockInTime = new Date(status.clockInTime);
 
     if (status.isCurrentJob) {
       showClockOutState();
       startTimer();
-      showMessage("You are already clocked in to this job.", "success");
+
+      showMessage(
+        "You are already clocked in to this job.",
+        "success"
+      );
+
       return;
     }
 
+    // CLOCKED IN ELSEWHERE
     showAlreadyClockedInElsewhere(status);
+
   } catch (err) {
-    showMessage("Could not check clock status: " + err.message, "error");
+    showMessage(
+      "Could not check clock status: " + err.message,
+      "error"
+    );
+
     showClockInState();
   }
 }
@@ -148,6 +171,22 @@ function showClockOutState() {
   document.getElementById("clockInBtn").classList.add("hidden");
   document.getElementById("clockOutBtn").classList.remove("hidden");
   document.getElementById("timerBox").classList.remove("hidden");
+}
+
+function showCompletedState() {
+  stopTimer();
+
+  const clockInBtn = document.getElementById("clockInBtn");
+  const clockOutBtn = document.getElementById("clockOutBtn");
+
+  clockInBtn.classList.add("hidden");
+
+  clockOutBtn.classList.remove("hidden", "clock-out");
+  clockOutBtn.classList.add("completed");
+  clockOutBtn.textContent = "Completed";
+  clockOutBtn.disabled = true;
+
+  document.getElementById("timerBox").classList.add("hidden");
 }
 
 function showAlreadyClockedInElsewhere(status) {
@@ -299,7 +338,7 @@ async function clockOut() {
     }
 
     stopTimer();
-    showClockInState();
+    showCompletedState();
 
     showMessage(
       `Clocked out successfully. Total minutes: ${json.totalMinutes}. Location captured.`,
