@@ -32,11 +32,20 @@
       </section>
 
       <section id="jobBox" class="hidden">
-        <div class="job-summary">
-          <h2 id="clientName"></h2>
-          <p id="jobDate"></p>
-          <p id="jobAddress"></p>
-        </div>
+        <div class="job-header-row">
+  <div class="job-summary">
+    <h2 id="clientName"></h2>
+    <p id="jobDate"></p>
+    <p id="jobAddress"></p>
+  </div>
+
+  <button
+    id="backToPortalBtn"
+    class="secondary-btn hidden"
+  >
+    Back
+  </button>
+</div>
 
         <div class="info-list">
           <div>
@@ -80,12 +89,6 @@
           <strong id="timer">00:00:00</strong>
         </div>
 
-        <button
-           id="backToPortalBtn"
-           class="secondary-btn hidden"
-              >
-            ← Back to Schedule
-        </button>
         <button id="clockInBtn" class="btn clock-in" onclick="clockIn()">Clock In</button>
         <button id="clockOutBtn" class="btn clock-out hidden" onclick="clockOut()">Clock Out</button>
 
