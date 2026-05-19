@@ -228,10 +228,14 @@ function renderJobPage() {
     selectedWorker.assignedTime || jobData.assignedTime || "";
 
   document.getElementById("serviceType").textContent = jobData.serviceType || "";
-  document.getElementById("entrance").textContent = jobData.entrance || "";
-  document.getElementById("materialInfo").textContent = jobData.materialInfo || "";
-  document.getElementById("instructions").textContent = jobData.instructions || "";
-  document.getElementById("otherInfo").textContent = jobData.otherInfo || "";
+document.getElementById("entrance").textContent = jobData.entrance || "";
+document.getElementById("materialInfo").textContent = jobData.materialInfo || "";
+document.getElementById("instructions").textContent = jobData.instructions || "";
+document.getElementById("otherInfo").textContent = jobData.otherInfo || "";
+
+document.getElementById("clockInBtn").classList.add("hidden");
+document.getElementById("clockOutBtn").classList.add("hidden");
+document.getElementById("timerBox").classList.add("hidden");
 }
 
 function getCurrentLocation() {
