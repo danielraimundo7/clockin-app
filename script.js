@@ -223,8 +223,8 @@ function renderJobPage() {
   document.getElementById("jobDate").textContent = `${jobData.date || ""} ${jobData.requestedTime || ""}`;
   document.getElementById("jobAddress").textContent = jobData.address || "";
 
-  document.getElementById("selectedWorkerInfo").textContent =
-    `${selectedWorker.workerName} (${selectedWorker.workerId}) — ${selectedWorker.role || ""} — $${selectedWorker.rate || ""}/hr`;
+  document.getElementById("selectedWorkerInfo").innerHTML =
+  formatWorkerPayDisplay(selectedWorker);
 
   document.getElementById("assignedTime").textContent =
     selectedWorker.assignedTime || jobData.assignedTime || "";
@@ -420,4 +420,23 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function formatWorkerPayDisplay(worker) {
+  const role = String(worker.role || "").toLowerCase();
+  const rate = Number(worker.baseRate || worker.rate || 0);
+  const estimatedPay = Number(worker.estimatedPay || 0);
+
+  if (role.includes("hourly")) {
+    return `
+      ${escapeHtml(worker.workerName)} (${escapeHtml(worker.workerId)}) — hourly<br>
+      Hourly Rate: $${rate.toFixed(2)}/hr<br>
+      Estimated Pay: ~$${estimatedPay.toFixed(2)}
+    `;
+  }
+
+  return `
+    ${escapeHtml(worker.workerName)} (${escapeHtml(worker.workerId)}) — flat<br>
+    Payout: $${Number(worker.rate || estimatedPay || 0).toFixed(2)}
+  `;
 }
