@@ -242,7 +242,10 @@ if (fromPortal && backBtn) {
   backBtn.classList.remove("hidden");
 
   backBtn.onclick = () => {
-    window.history.back();
+    const portalUrl =
+      `https://dashboardapp-ecru-delta.vercel.app/worker-portal.html?workerId=${encodeURIComponent(portalWorkerId || "")}`;
+
+    window.location.href = portalUrl;
   };
 }
 
