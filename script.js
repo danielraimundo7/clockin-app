@@ -428,7 +428,17 @@ function escapeHtml(value) {
 function formatWorkerPayDisplay(worker) {
   const role = String(worker.role || "").toLowerCase();
   const rate = Number(worker.baseRate || worker.rate || 0);
-  const estimatedPay = Number(worker.estimatedPay || 0);
+
+  const assignedDecimal = parseTimeToDecimal(
+    worker.assignedTime || jobData.assignedTime || ""
+  );
+
+  const adjustmentDecimal = parseTimeToDecimal(
+    jobData.authorizedTimeAdjustment || ""
+  );
+
+  const totalDecimal = Math.max(assignedDecimal + adjustmentDecimal, 0);
+  const estimatedPay = rate * totalDecimal;
 
   if (role.includes("hourly")) {
     return `
@@ -440,6 +450,24 @@ function formatWorkerPayDisplay(worker) {
 
   return `
     ${escapeHtml(worker.workerName)} (${escapeHtml(worker.workerId)}) — flat<br>
-    Payout: $${Number(worker.rate || estimatedPay || 0).toFixed(2)}
+    Payout: $${rate.toFixed(2)}
   `;
+}
+
+function parseTimeToDecimal(value) {
+  const text = String(value || "").toLowerCase().trim();
+  if (!text) return 0;
+
+  const sign = text.startsWith("-") ? -1 : 1;
+  const cleaned = text.replace("+", "").replace("-", "").trim();
+
+  let totalMinutes = 0;
+
+  const hoursMatch = cleaned.match(/(\d+(?:\.\d+)?)\s*h/);
+  if (hoursMatch) totalMinutes += Number(hoursMatch[1]) * 60;
+
+  const minutesMatch = cleaned.match(/(\d+(?:\.\d+)?)\s*m/);
+  if (minutesMatch) totalMinutes += Number(minutesMatch[1]);
+
+  return sign * (totalMinutes / 60);
 }
